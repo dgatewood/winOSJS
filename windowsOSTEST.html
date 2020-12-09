@@ -1,0 +1,303 @@
+<html>
+<head>
+	<style>
+	*{padding: 0; margin:0;}
+	canvas{ background: #eee; display: block; margin: 0 auto;}
+	</style>
+</head>
+
+<body>
+<canvas id= "myCanvas" width="800" height="600"></canvas>
+<script type="text/javascript">
+let canvas = document.getElementById("myCanvas");
+let ctx = canvas.getContext("2d");
+canvas.addEventListener("mousemove", getPosition, false);
+canvas.addEventListener("mouseup", getMouseUp, false);
+canvas.addEventListener("mousedown", getMouseDown, false);
+ctx.canvas.width  = window.innerWidth;
+ctx.canvas.height = window.innerHeight;
+
+let fps = 100;
+const wH = window.innerHeight;
+const wW = window.innerWidth;
+let icons = [];
+let windows = [];
+let mouseX = 0;
+let mouseY = 0;
+let mouseIsDown = false;
+let firstClick = false;
+let doubleClick = false;
+let mouseTimer = 0;
+let oldMouseX = -1;
+let oldMouseY = -1;
+
+
+function getPosition(event)
+{
+  mouseX = event.x - canvas.offsetLeft;
+  mouseY = event.y - canvas.offsetTop;
+}
+
+function getMouseDown(e)
+{
+	mouseIsDown = true;
+	if(doubleClick == true)
+	{
+		firstClick = true;
+		mouseTimer = 0;
+	}
+	if(firstClick == true && mouseTimer < 60)
+	{
+		doubleClick = true;
+	}
+	if(firstClick == true && mouseTimer >= 60)
+	{
+		firstClick = true;
+		mouseTimer = 0;
+	}
+	else{
+		firstClick = true;
+		mouseTimer = 0;
+	}
+}
+
+function getMouseUp(e)
+{
+	mouseIsDown = false;
+	oldMouseX = -1;
+	oldMouseY = -1;
+	setIsWindowMovingFalse(windows);
+	
+}
+
+function Icon(x1, y1, type, address, width, height, name)
+{
+	this.x = x1;
+	this.y = y1;
+	this.type = type;
+	this.address = address;
+	this.w = width;
+	this.h = height;
+	this.name = name;
+}
+
+function Window(x1, y1, type, address, width, height, name)
+{
+	this.x = x1;
+	this.y = y1;
+	this.type = type;
+	this.address = address;
+	this.w = width;
+	this.h = height;
+	this.name = name;
+	this.isActive = false;
+	this.isMoving = false;
+}
+
+
+icons.push(new Icon(100,100, 1, "img1.png", 50, 60, "maisie"));
+
+function drawIcons()
+{
+	for(let i = 0; i < icons.length; i++)
+	{
+		if(icons[i].type == 1)
+		{
+			let img = new Image();
+			img.src = icons[i].address;
+			ctx.fillStyle = "rgb(0,0,0)";
+			ctx.font = "10px Ariel";
+			ctx.drawImage(img, icons[i].x, icons[i].y,
+							icons[i].w, icons[i].h * (5/6));
+			ctx.fillText(icons[i].name, icons[i].x + 2,
+							icons[i].y +(icons[i].h * (5/6)) + 5)
+			//console.log("MouseX: " + mouseX + "  and mouseY: " + mouseY);				
+			if(mouseX >= icons[i].x && mouseX <= icons[i].x + icons[i].w &&
+				mouseY >= icons[i].y && mouseY <= icons[i].y + icons[i].h &&
+				doubleClick)
+				///
+				{	
+					doubleClick = false;
+					let winX = 100 + (10 * windows.length);
+					let winY = 100 + (10 * windows.length);
+					windows.push(new Window(winX,winY, icons[i].type, 
+					icons[i].address, 300, 300, icons[i].name));
+				}
+		}
+	}
+}
+
+function drawWindows()
+{
+	for(let i = 0; i < windows.length; i++)
+	{
+		//console.log("We are on image, " + i);
+		if(windows[i].type == 1)
+		{
+			let img = new Image();
+			img.src = windows[i].address;
+			ctx.fillStyle = "rgb(0,0,0)";
+			ctx.font = "10px Ariel";
+			ctx.fillStyle = "rgb(185,185,185)";
+			ctx.fillRect(windows[i].x - 3, windows[i].y - 30,
+						windows[i].w + 6, windows[i].h + 33);
+			ctx.drawImage(img, windows[i].x, windows[i].y,
+							windows[i].w, windows[i].h);
+			if(mouseX >= windows[i].x + windows[i].w - 28 && 
+				mouseX <= windows[i].x + windows[i].w + 3 &&
+				mouseY >= windows[i].y - 30 
+				&& mouseY <= windows[i].y)
+				{
+					
+					ctx.fillStyle = "rgb(255,0,0)";
+					ctx.fillRect(windows[i].x + windows[i].w - 28, 
+									windows[i].y - 30, 30, 30);
+					if(mouseIsDown && oldMouseX == -1 && oldMouseY == -1)
+					{
+						///close window
+						windows.splice(i, 1);
+						firstClick = false;
+						doubleClick = false;
+					}
+				}
+			else
+			{
+				ctx.fillStyle = "rgb(0,0,0)";
+				ctx.font = "32px Ariel";
+				ctx.fillText("X", windows[i].x + windows[i].w - 23, 
+				windows[i].y - 2);
+			}
+			if(windows[i].isActive && mouseIsDown &&
+				oldMouseX > -1 && oldMouseY > -1)
+				{	
+					windows[i].isMoving = true;
+					deltaX = oldMouseX - mouseX;
+					deltaY = oldMouseY - mouseY;
+					windows[i].x -= deltaX;
+					windows[i].y -= deltaY;
+				}
+			else if(mouseX >= windows[i].x && 
+				mouseX <= windows[i].x + windows[i].w - 28 &&
+				mouseY >= windows[i].y - 30 
+				&& mouseY <= windows[i].y &&
+				!isAnotherWindowMoving(windows))
+				{
+					if(mouseIsDown)
+					{
+						windows[i].isActive = true;
+						[windows[i], windows[windows.length-1]] = [windows[windows.length-1], windows[i]];
+						for(let i = windows.length-2; i >= 0; i--)
+						{
+							windows[i].isActive = false;
+						}
+						if(oldMouseX > -1 && oldMouseY > -1)
+						{
+							deltaX = oldMouseX - mouseX;
+							deltaY = oldMouseY - mouseY;
+							windows[i].x -= deltaX;
+							windows[i].y -= deltaY;
+						}
+					}
+				}
+			ctx.fillStyle = "rgb(0,0,0)";
+			ctx.font = "32px Ariel";
+			ctx.fillText("X", windows[i].x + windows[i].w - 23, 
+			windows[i].y - 2);
+			//ctx.fillText(icons[i].name, icons[i].x + 2,
+			//				icons[i].y +(icons[i].h * (5/6)) + 5)
+		}
+	}
+}
+
+function setIsWindowMovingFalse(list)
+{
+	for(let i = 0; i < list.length; i++)
+	{
+		if(list[i].isMoving == true)
+		{
+			list[i].isMoving = false;
+		}
+	}
+}
+
+function isAnotherWindowMoving(list)
+{
+	let result = false;
+	for(let i = 0; i < list.length; i++)
+	{
+		if(list[i].isMoving == true)
+		{
+			result = true;
+		}
+	}
+	return result;
+}
+
+function drawToolbar()
+{
+	ctx.fillStyle = "rgb(200,200,230)";
+	ctx.fillRect(0, (19/20) * wH, wW,  (1/20) * wH);
+	
+	///fill in date and time
+	let d = new Date();
+	ctx.fillStyle = "rgb(0,0,0)";
+	ctx.font = "12px Ariel";
+	let hr = d.getHours() - 12;
+	let tod = "";
+	if(d.getHours() >= 12)
+	{
+		tod = "PM";
+	}
+	else
+	{
+		tod = "AM"
+	}
+	if(hr == 0)
+	{
+		hr = 12;
+	}
+	let min = "";
+	if(d.getMinutes() >= 10)
+	{
+		min = d.getMinutes();
+	}
+	else
+	{
+		min = "0"+d.getMinutes();
+	}	
+	let time = hr + ":" + min + " " + tod;
+	ctx.fillText(time, 1300/1366 * wW, 672/695 * wH);
+	let date = (d.getMonth()+1) + "/" + d.getDate() + "/" +
+				d.getFullYear();
+	ctx.fillText(date, 1300/1366 * wW, 687/695 * wH);
+}
+
+function draw(){
+    setTimeout(function() {
+	requestAnimationFrame(draw);
+	ctx.clearRect(0,0,wW,wH);
+	///all code goes here
+	mouseTimer += 1;
+	if(mouseTimer >= 60)
+	{
+		firstClick = false;
+		doubleClick = false;
+		mouseTimer = 0;
+	}
+	
+	drawIcons();
+	drawWindows();
+	drawToolbar();
+	if(mouseIsDown)
+	{
+		oldMouseX = mouseX;
+		oldMouseY = mouseY;
+	}
+    }, 1000/fps);	
+}
+
+draw();
+
+</script>
+</body>
+</html>
